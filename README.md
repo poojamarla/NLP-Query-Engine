@@ -93,12 +93,9 @@ Frontend runs on http://localhost:3000
 **Language:** Python 3.8+  
 **Libraries:** pydantic • langchain • PyPDF2 • python-docx  
 
-## 🖼️ UI Screenshots
-
-![App Screenshot](docs/screenshot_ui.png)
 
 ## 🎥 Demo Video
-Watch the full walkthrough on Loom: [Insert Loom Video URL Here]
+Watch the full walkthrough video: https://drive.google.com/file/d/1e1XPv-e5IH2SaGtWINa7-7S9Q1OBGko6/view?usp=sharing
 
 ## 🧩 Example Queries & Results
 
