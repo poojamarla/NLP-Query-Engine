@@ -1,0 +1,49 @@
+import sqlite3
+import os
+
+# Always create DB in the backend folder
+db_path = os.path.join(os.path.dirname(__file__), "test.db")
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+# Drop tables if already exist
+cursor.execute("DROP TABLE IF EXISTS employees")
+cursor.execute("DROP TABLE IF EXISTS departments")
+
+# Create departments table
+cursor.execute("""
+CREATE TABLE departments (
+    dept_id INTEGER PRIMARY KEY,
+    dept_name TEXT NOT NULL
+)
+""")
+
+# Create employees table
+cursor.execute("""
+CREATE TABLE employees (
+    emp_id INTEGER PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    dept_id INTEGER,
+    salary REAL,
+    FOREIGN KEY (dept_id) REFERENCES departments(dept_id)
+)
+""")
+
+# Insert demo data
+cursor.executemany("INSERT INTO departments (dept_name) VALUES (?)", [
+    ("Engineering",),
+    ("HR",),
+    ("Finance",)
+])
+
+cursor.executemany("INSERT INTO employees (full_name, dept_id, salary) VALUES (?, ?, ?)", [
+    ("Alice Johnson", 1, 75000),
+    ("Bob Smith", 1, 90000),
+    ("Charlie Brown", 2, 60000),
+    ("Diana Prince", 3, 85000),
+])
+
+conn.commit()
+conn.close()
+
+print(f"test.db created at {db_path}")

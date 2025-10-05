@@ -1,0 +1,21 @@
+from services.document_processor import DocumentProcessor
+import os
+
+if __name__ == "__main__":
+    dp = DocumentProcessor()
+
+    # Make sure you have some test files inside backend/docs/
+    docs_folder = os.path.join(os.path.dirname(__file__), "docs")
+    files = [os.path.join(docs_folder, f) for f in os.listdir(docs_folder) if f.endswith(".txt")]
+
+    if not files:
+        print("No .txt files found in backend/docs/ — create a sample file like resume.txt")
+    else:
+        count = dp.process_documents(files)
+        print(f"Processed {count} document chunks")
+
+        # Now test searching
+        results = dp.search("Python developer resume")
+        print("\n Top Matches:")
+        for r in results:
+            print("-", r[:150], "...")

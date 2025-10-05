@@ -1,0 +1,99 @@
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from backend.services.query_engine import QueryEngine
+from backend.services.document_processor import DocumentProcessor
+import shutil
+import os
+import logging
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+
+
+# FastAPI App Initialization
+app = FastAPI(title="NLP Query Engine API")
+
+# allow React frontend (http://localhost:3000) to call backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # for dev, allow all
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Init Global Objects
+query_engine = None
+doc_processor = DocumentProcessor()
+
+
+# API ROUTES
+@app.post("/api/connect-database")
+def connect_database(connection_string: str = Form(...)):
+    global query_engine
+    try:
+        query_engine = QueryEngine(connection_string)
+        logging.info(f"Database connection successful: {connection_string}")
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/upload-documents")
+async def upload_documents(files: list[UploadFile] = File(...)):
+    docs_folder = "backend/docs"
+    os.makedirs(docs_folder, exist_ok=True)
+
+    saved_files = []
+    for file in files:
+        file_path = os.path.join(docs_folder, file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        saved_files.append(file_path)
+
+    chunks = doc_processor.process_documents(saved_files)
+
+    logging.info(f"Uploaded and processed {len(saved_files)} documents.")
+
+
+@app.post("/api/query")
+async def process_query(query: str = Form(...)):
+    """
+    Process a natural language query via QueryEngine or DocumentProcessor.
+    """
+    global query_engine, doc_processor
+    if not query_engine:
+        return {"status": "error", "message": "❌ No DB connection yet. Connect first."}
+
+    result = query_engine.process_query(query)
+
+    # If it’s a document query, swap in results from doc_processor
+    if result.get("query_type") == "document":
+        result["results"] = doc_processor.search(query)
+
+    return result
+
+
+@app.get("/api/test-pagination")
+def test_pagination(limit: int = 5, offset: int = 0):
+    global query_engine
+    if not query_engine:
+        return {"status": "error", "message": "❌ No DB connection yet."}
+    sql = "SELECT * FROM employees"
+    result = query_engine.execute_sql(sql, limit=limit, offset=offset)
+    return {"status": "ok", "data": result}
+    
+    
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Unhandled error: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "Internal Server Error"}
+    )
